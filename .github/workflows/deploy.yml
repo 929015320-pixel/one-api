@@ -1,1 +1,31 @@
 
+name: Deploy One API
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            if ! command -v docker &> /dev/null; then
+              curl -fsSL https://get.docker.com | sudo bash
+              sudo systemctl enable --now docker
+            fi
+            sudo docker pull justsong/one-api
+            sudo docker stop one-api || true
+            sudo docker rm one-api || true
+            sudo docker run -d --name one-api --restart always -p 3000:3000 -v /data/one-api:/data justsong/one-api
